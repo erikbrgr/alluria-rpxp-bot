@@ -702,7 +702,10 @@ class Commands(commands.Cog):
         connection.commit()
         connection.close()
         
-        await ctx.send(f"`{name}` was set to level {level}.")
+        message = f"`{name}` was set to level {level}."
+        embed_message = discord.Embed(title=f"{ctx.author.display_name} sets the level of a tupper.", description=message, color=discord.Color.purple()) 
+        await ctx.send(embed = embed_message)
+        connection.close()
 
     @commands.command()
     async def levelup(self, ctx, *, content: str):
