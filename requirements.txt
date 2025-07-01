@@ -1,6 +1,2 @@
 dotenv
 discord
-sqlite3
-datetime
-asyncio
-os
