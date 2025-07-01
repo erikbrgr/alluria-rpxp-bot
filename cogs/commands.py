@@ -941,6 +941,9 @@ class Commands(commands.Cog):
 
         nmonthly = monthly + totalcol
         ntotal = total + totalcol
+
+        nmonthly = round(nmonthly)
+        ntotal = round(ntotal)
         
         cursor.execute("UPDATE Users SET monthly_rpxp = ?, total_rpxp = ? WHERE guild_id = ? AND user_id = ?", (nmonthly, ntotal, guild_id, ctx.author.id))
         
@@ -1095,6 +1098,11 @@ class Commands(commands.Cog):
         avg_words = total_words / total_users if total_users > 0 else 0
         avg_xp = total_xp / total_users if total_users > 0 else 0
 
+        total_words = int(total_words)
+        total_xp = int(total_xp)
+        avg_words = int(avg_words)
+        avg_xp = int(avg_xp)
+
         top_user = None
         top_xp = 0
 
@@ -1148,6 +1156,11 @@ class Commands(commands.Cog):
 
         avg_words = total_words / total_users if total_users > 0 else 0
         avg_xp = total_xp / total_users if total_users > 0 else 0
+
+        total_words = int(total_words)
+        total_xp = int(total_xp)
+        avg_words = int(avg_words)
+        avg_xp = int(avg_xp)
 
         top_user = None
         top_xp = 0
