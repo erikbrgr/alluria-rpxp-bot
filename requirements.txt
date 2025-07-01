@@ -1,6 +1,5 @@
 dotenv
 discord
-re
 sqlite3
 datetime
 asyncio
