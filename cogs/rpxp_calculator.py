@@ -43,8 +43,10 @@ class Counter(commands.Cog):
     async def db_worker(self):
         while True:
             item = await self.input_queue.get()
-
-            await self.process_message(item)
+            try:
+                await self.process_message(item)
+            except Exception as e:
+                print(f"Error processing queued message: {e}")
 
             self.input_queue.task_done()
 
@@ -77,15 +79,16 @@ class Counter(commands.Cog):
         cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (guild_id, author.id, tag))
 
         result = cursor.fetchone()
+
+        if result is None:
+            connection.close()
+            return
+        
         tupper_name = result[3]
         level = result[5]
         current_xp = result[6]
         last_message = result[7]
         parent = result[9]
-
-        if result is None:
-            connection.close()
-            return
         
         if parent:
             cursor.execute("UPDATE Tuppers SET last_message = ? WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (self.time, guild_id, author.id, parent))
