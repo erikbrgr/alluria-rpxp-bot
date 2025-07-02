@@ -90,7 +90,7 @@ class Commands(commands.Cog):
         await ctx.send(embed=embed_message)
 
     @commands.command()
-    #@commands.has_permissions(administrator=True)
+    @commands.has_permissions(administrator=True)
     async def setup(self, ctx):
         await ctx.message.delete()
         if ctx.author.bot:
@@ -117,7 +117,7 @@ class Commands(commands.Cog):
         connection.close()
 
     @commands.command()
-    #@commands.has_permissions(administrator=True)
+    @commands.has_permissions(administrator=True)
     async def staff_role(self, ctx, staff_role: str):
         await ctx.message.delete()
         if ctx.author.bot:
@@ -150,7 +150,7 @@ class Commands(commands.Cog):
         connection.close()
 
     @commands.command()
-    #@commands.has_permissions(administrator=True)
+    @commands.has_permissions(administrator=True)
     async def log_channel(self, ctx, log_channel: str):
         await ctx.message.delete()
         if ctx.author.bot:
@@ -183,7 +183,7 @@ class Commands(commands.Cog):
         connection.close()
 
     @commands.command()
-    #@commands.has_permissions(administrator=True)
+    @commands.has_permissions(administrator=True)
     async def cooldown(self, ctx, cooldown: str):
         await ctx.message.delete()
         if ctx.author.bot:
@@ -222,7 +222,7 @@ class Commands(commands.Cog):
         connection.close()
 
     @commands.command()
-    #@commands.has_permissions(administrator=True)
+    @commands.has_permissions(administrator=True)
     async def xp_per_word(self, ctx, xppw: str):
         await ctx.message.delete()
         if ctx.author.bot:
@@ -250,7 +250,7 @@ class Commands(commands.Cog):
         connection.close()
 
     @commands.command()
-    #@commands.has_permissions(administrator=True)
+    @commands.has_permissions(administrator=True)
     async def level_falloff(self, ctx, falloff: str):
         await ctx.message.delete()
         if ctx.author.bot:
