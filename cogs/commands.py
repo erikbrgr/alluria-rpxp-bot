@@ -1110,7 +1110,7 @@ class Commands(commands.Cog):
             user_id = row[1]
             user_xp = row[3]
             if user_xp > top_xp:
-                top_xp = user_xp
+                top_xp = round(user_xp)
                 top_user_id = user_id
 
         message = (
@@ -1169,7 +1169,7 @@ class Commands(commands.Cog):
             user_id = row[1]
             user_xp = row[5]
             if user_xp > top_xp:
-                top_xp = user_xp
+                top_xp = round(user_xp)
                 top_user_id = user_id
 
         message = (
