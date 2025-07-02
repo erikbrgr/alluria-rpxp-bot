@@ -50,13 +50,13 @@ class Statistics(commands.Cog):
         avg_xp = total_xp / total_users if total_users > 0 else 0
 
         top_user_id = None
-        top_xp = 0
+        top_words = 0
 
         for row in users:
             user_id = row[1]
-            user_xp = row[3]
-            if user_xp > top_xp:
-                top_xp = user_xp
+            user_words = row[3]
+            if user_words > top_words:
+                top_words = user_words
                 top_user_id = user_id
 
         message = (
@@ -71,9 +71,9 @@ class Statistics(commands.Cog):
         if top_user_id:
             member = guild.get_member(top_user_id)
             if member:
-                embed_message.set_author(name=f"Top User: {member.display_name} with {top_xp} XP", icon_url=member.display_avatar.url)
+                embed_message.set_author(name=f"Top User: {member.display_name} with {top_words} words", icon_url=member.display_avatar.url)
             else:
-                embed_message.set_author(name=f"Top User: <@{top_user_id}> with {top_xp} XP")
+                embed_message.set_author(name=f"Top User: <@{top_user_id}> with {top_words} words")
 
         if guild.icon:
             embed_message.set_image(url=guild.icon.url)
