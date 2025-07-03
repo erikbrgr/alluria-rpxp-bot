@@ -326,16 +326,6 @@ class Commands(commands.Cog):
 
         tag, rest = content.split(' ', 1)
 
-        cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (guild_id, ctx.author.id, tag))
-        tag_check = cursor.fetchone()
-
-        if tag_check:
-            message = 'Tupper tag must be unique.'
-            embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-            await ctx.send(embed = embed_message)
-            connection.close()
-            return
-
         # Step 2: Get the character name in quotes
         if not rest.startswith('['):
             message = 'Character name must be in square brackets.'
@@ -354,6 +344,18 @@ class Commands(commands.Cog):
 
         name = rest[1:end_bracket_index]
         rest = rest[end_bracket_index + 1:].strip()
+
+        cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (guild_id, ctx.author.id, tag))
+        check = cursor.fetchone()
+        check_name = check[3]
+        check_tag[2]
+
+        if check_tag == tag and check_name != name:
+            message = 'Tupper tag must be unique.'
+            embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
+            await ctx.send(embed = embed_message)
+            connection.close()
+            return
 
         # Step 3: Get the role and optional level
         if not rest:
