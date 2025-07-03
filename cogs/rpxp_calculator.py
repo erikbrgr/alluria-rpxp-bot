@@ -150,10 +150,10 @@ class Counter(commands.Cog):
 
         if parent:
             cursor.execute("UPDATE Tuppers SET tupper_rpxp = ? WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (newxp, guild_id, author.id, parent))
-            print(f"Applied {rpxp} rpxp")
+            print(f"Applied {rpxp} rpxp {parent}")
         else:
             cursor.execute("UPDATE Tuppers SET tupper_rpxp = ? WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (newxp, guild_id, author.id, tag))
-            print(f"Applied {rpxp} rpxp")
+            print(f"Applied {rpxp} rpxp to {tupper_name}")
 
         connection.commit()
         connection.close()
