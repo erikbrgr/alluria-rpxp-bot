@@ -115,7 +115,7 @@ class Counter(commands.Cog):
             print(f"{tupper_name} sent {word_len} words.")
         elif tupper_role == 0:
             cursor.execute("UPDATE Tuppers SET last_message = ? WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (self.time, guild_id, author.id, tag))
-            cursor.exectute("SELECT tupper_level FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_role = ?", (guild_id, author.id, 1))
+            cursor.execute("SELECT tupper_level FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_role = ?", (guild_id, author.id, 1))
             levels = [row[0] for row in cursor.fetchall()]
             print(levels)
 
