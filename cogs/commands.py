@@ -972,7 +972,7 @@ class Commands(commands.Cog):
                         pool += rpxp
     
             if pool != 0:
-                collection_messages.append(f"- **{pool}**  NPC rp xp can be freely distributed among your PCs.")
+                collection_messages.append(f"- **{pool}** XP from your NPCs can be applied to a PC of your choice.")
                     
             if not cooldown_done:
                 message = f"Collection is on **cooldown**. You can collect rp xp again **<t:{last_collection + cooldown}:R>**."
