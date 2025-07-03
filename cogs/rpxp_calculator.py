@@ -108,11 +108,9 @@ class Counter(commands.Cog):
             cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (guild_id, author.id, parent))
             parent_result = cursor.fetchone()
             current_xp = parent_result[6]
-            word_len = len(words) - 1
             print(f"{tupper_name} sent {word_len} words. RPXP applied to parent {parent}.")
         else:
             cursor.execute("UPDATE Tuppers SET last_message = ? WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (self.time, guild_id, author.id, tag))
-            word_len = len(words) - 1
             print(f"{tupper_name} sent {word_len} words.")
 
         # User row
