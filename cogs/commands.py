@@ -907,7 +907,7 @@ class Commands(commands.Cog):
             for row in list_results:
                 name = row[3]
                 role = row[4]
-                rpxp = round(row[6])
+                rpxp = round(row[6] or 0)
     
                 if role == 2:
                     continue
