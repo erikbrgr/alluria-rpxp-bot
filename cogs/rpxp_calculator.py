@@ -79,7 +79,7 @@ class Counter(commands.Cog):
         escaped_tags = [re.escape(tag) for tag in tags]
         pattern = r'^(' + '|'.join(escaped_tags) + r')(.*)'
         
-        match = re.match(pattern, content)
+        match = re.match(pattern, content, re.DOTALL)
         if not match:
             connection.close()
             return  # No valid tag found, exit
