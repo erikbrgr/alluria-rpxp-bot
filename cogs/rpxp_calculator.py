@@ -73,7 +73,7 @@ class Counter(commands.Cog):
         cursor = connection.cursor()
 
         cursor.execute("SELECT tupper_tag FROM Tuppers WHERE guild_id = ? AND owner_id = ?", (guild_id, author.id))
-        tags = [row[2] for row in cursor.fetchall()]
+        tags = [row[0] for row in cursor.fetchall()]
         
         # Build regex pattern to match any known tag at start of message
         escaped_tags = [re.escape(tag) for tag in tags]
