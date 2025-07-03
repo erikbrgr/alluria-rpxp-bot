@@ -97,6 +97,7 @@ class Counter(commands.Cog):
             return
         
         tupper_name = result[3]
+        tupper_role = result [4]
         level = result[5]
         current_xp = result[6]
         last_message = result[7]
@@ -109,9 +110,15 @@ class Counter(commands.Cog):
             parent_result = cursor.fetchone()
             current_xp = parent_result[6]
             print(f"{tupper_name} sent {word_len} words. RPXP applied to parent {parent}.")
-        else:
+        elif tupper_role == 1:
             cursor.execute("UPDATE Tuppers SET last_message = ? WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (self.time, guild_id, author.id, tag))
             print(f"{tupper_name} sent {word_len} words.")
+        elif tupper_role == 0:
+            cursor.execute("UPDATE Tuppers SET last_message = ? WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (self.time, guild_id, author.id, tag))
+            cursor.exectute("SELECT tupper_level FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_role = ?", (guild_id, author.id, 1))
+            levels = [row[0] for row in cursor.fetchall()]
+            print(levels)
+
 
         # User row
         cursor.execute("SELECT * FROM Users WHERE guild_id = ? AND user_id = ?", (guild_id, author.id))
