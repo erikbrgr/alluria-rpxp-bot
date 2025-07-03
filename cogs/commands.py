@@ -872,102 +872,105 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def collect(self, ctx):
-        await ctx.message.delete()
-        if ctx.author.bot:
-            return
-        connection = sqlite3.connect("./RPXP_databank.db")
-        cursor = connection.cursor()
-        guild_id = ctx.guild.id
-        owner_id = ctx.author.id
-
-        cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
-
-        result = cursor.fetchone()
-
-        if result is None:
-            message = "This server is not set up yet."
-            embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-            await ctx.send(embed = embed_message)
-            connection.close()
-            return
-        
-        cooldown = result[3]
-        
-        cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ?", (guild_id, owner_id))
-
-        results = cursor.fetchall()
-        list_results = [list(row) for row in results]
-        found_rpxp = False
-        cooldown_done = False
-        collection_messages = []
-        totalcol = 0
-        pool = 0
-        
-        for row in list_results:
-            name = row[3]
-            role = row[4]
-            rpxp = round(row[6])
-
-            if role == 2:
-                continue
-
-            if row[8] is None:
-                last_collection = 0
-            else:
-                last_collection = row[8]
-
-            if self.time - last_collection > cooldown:
-                cooldown_done = True
-                cursor.execute("UPDATE Tuppers SET last_collection = ? WHERE guild_id = ? AND owner_id = ?", (self.time, guild_id, owner_id))
-                connection.commit()
-            if rpxp > 0:
-                found_rpxp = True
-                totalcol += rpxp
-                if role == 1:
-                    collection_messages.append(f"- **{name}** collects **{rpxp}** rp xp.")
+        try:
+            await ctx.message.delete()
+            if ctx.author.bot:
+                return
+            connection = sqlite3.connect("./RPXP_databank.db")
+            cursor = connection.cursor()
+            guild_id = ctx.guild.id
+            owner_id = ctx.author.id
+    
+            cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
+    
+            result = cursor.fetchone()
+    
+            if result is None:
+                message = "This server is not set up yet."
+                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
+                await ctx.send(embed = embed_message)
+                connection.close()
+                return
+            
+            cooldown = result[3]
+            
+            cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ?", (guild_id, owner_id))
+    
+            results = cursor.fetchall()
+            list_results = [list(row) for row in results]
+            found_rpxp = False
+            cooldown_done = False
+            collection_messages = []
+            totalcol = 0
+            pool = 0
+            
+            for row in list_results:
+                name = row[3]
+                role = row[4]
+                rpxp = round(row[6])
+    
+                if role == 2:
+                    continue
+    
+                if row[8] is None:
+                    last_collection = 0
                 else:
-                    pool += rpxp
-
-        if pool != 0:
-            collection_messages.append(f"- **{pool}**  NPC rp xp can be freely distributed among your PCs.")
-                
-        if not cooldown_done:
-            message = f"Collection is on **cooldown**. You can collect rp xp again **<t:{last_collection + cooldown}:R>**."
+                    last_collection = row[8]
+    
+                if self.time - last_collection > cooldown:
+                    cooldown_done = True
+                    cursor.execute("UPDATE Tuppers SET last_collection = ? WHERE guild_id = ? AND owner_id = ?", (self.time, guild_id, owner_id))
+                    connection.commit()
+                if rpxp > 0:
+                    found_rpxp = True
+                    totalcol += rpxp
+                    if role == 1:
+                        collection_messages.append(f"- **{name}** collects **{rpxp}** rp xp.")
+                    else:
+                        pool += rpxp
+    
+            if pool != 0:
+                collection_messages.append(f"- **{pool}**  NPC rp xp can be freely distributed among your PCs.")
+                    
+            if not cooldown_done:
+                message = f"Collection is on **cooldown**. You can collect rp xp again **<t:{last_collection + cooldown}:R>**."
+                embed_message = discord.Embed(title=f"{ctx.author.display_name} collects rp xp", description=message, color=discord.Color.purple())
+                await ctx.send(embed = embed_message)
+                connection.close()
+                return
+            
+            if not found_rpxp:
+                message = f"None of your characters have **any** rp xp to collect. Please play some more and try again later."
+                embed_message = discord.Embed(title=f"{ctx.author.display_name} collects rp xp", description=message, color=discord.Color.purple())
+                await ctx.send(embed = embed_message)
+                connection.close()
+                return
+            
+            cursor.execute("SELECT * FROM Users WHERE guild_id = ? AND user_id = ?", (guild_id, ctx.author.id))
+            user = cursor.fetchone()
+    
+            monthly = user[3]
+            total = user[5]
+    
+            nmonthly = monthly + totalcol
+            ntotal = total + totalcol
+    
+            nmonthly = round(nmonthly)
+            ntotal = round(ntotal)
+            
+            cursor.execute("UPDATE Users SET monthly_rpxp = ?, total_rpxp = ? WHERE guild_id = ? AND user_id = ?", (nmonthly, ntotal, guild_id, ctx.author.id))
+            
+            message = "\n".join(collection_messages)
+    
             embed_message = discord.Embed(title=f"{ctx.author.display_name} collects rp xp", description=message, color=discord.Color.purple())
             await ctx.send(embed = embed_message)
+            
+            cursor.execute("UPDATE Tuppers SET tupper_rpxp = ? WHERE guild_id = ? AND owner_id = ?", (0, guild_id, owner_id))
+    
+            connection.commit()
             connection.close()
-            return
-        
-        if not found_rpxp:
-            message = f"None of your characters have **any** rp xp to collect. Please play some more and try again later."
-            embed_message = discord.Embed(title=f"{ctx.author.display_name} collects rp xp", description=message, color=discord.Color.purple())
-            await ctx.send(embed = embed_message)
-            connection.close()
-            return
-        
-        cursor.execute("SELECT * FROM Users WHERE guild_id = ? AND user_id = ?", (guild_id, ctx.author.id))
-        user = cursor.fetchone()
-
-        monthly = user[3]
-        total = user[5]
-
-        nmonthly = monthly + totalcol
-        ntotal = total + totalcol
-
-        nmonthly = round(nmonthly)
-        ntotal = round(ntotal)
-        
-        cursor.execute("UPDATE Users SET monthly_rpxp = ?, total_rpxp = ? WHERE guild_id = ? AND user_id = ?", (nmonthly, ntotal, guild_id, ctx.author.id))
-        
-        message = "\n".join(collection_messages)
-
-        embed_message = discord.Embed(title=f"{ctx.author.display_name} collects rp xp", description=message, color=discord.Color.purple())
-        await ctx.send(embed = embed_message)
-        
-        cursor.execute("UPDATE Tuppers SET tupper_rpxp = ? WHERE guild_id = ? AND owner_id = ?", (0, guild_id, owner_id))
-
-        connection.commit()
-        connection.close()
+        except Exception as e:
+            print(e)
 
     @commands.command()
     async def list(self, ctx, content: str):
