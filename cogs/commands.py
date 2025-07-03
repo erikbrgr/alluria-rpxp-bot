@@ -891,7 +891,7 @@ class Commands(commands.Cog):
         
         cooldown = result[3]
         
-        cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_role = ?", (guild_id, owner_id, 1))
+        cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ?", (guild_id, owner_id))
 
         results = cursor.fetchall()
         list_results = [list(row) for row in results]
@@ -899,10 +899,15 @@ class Commands(commands.Cog):
         cooldown_done = False
         collection_messages = []
         totalcol = 0
+        pool = 0
         
         for row in list_results:
             name = row[3]
+            role = row[4]
             rpxp = round(row[6])
+
+            if role == 2:
+                continue
 
             if row[8] is None:
                 last_collection = 0
@@ -915,9 +920,15 @@ class Commands(commands.Cog):
                 connection.commit()
             if rpxp > 0:
                 found_rpxp = True
-                collection_messages.append(f"- **{name}** collects **{rpxp}** rp xp.")
                 totalcol += rpxp
-        
+                if role == 1:
+                    collection_messages.append(f"- **{name}** collects **{rpxp}** rp xp.")
+                else:
+                    pool += rpxp
+
+        if pool != 0:
+            collection_messages.append(f"- **{rpxp}**  NPC rp xp can be freely distributed among your PCs.")
+                
         if not cooldown_done:
             message = f"Collection is on **cooldown**. You can collect rp xp again **<t:{last_collection + cooldown}:R>**."
             embed_message = discord.Embed(title=f"{ctx.author.display_name} collects rp xp", description=message, color=discord.Color.purple())
