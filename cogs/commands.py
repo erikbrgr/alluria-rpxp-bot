@@ -348,7 +348,7 @@ class Commands(commands.Cog):
         cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (guild_id, ctx.author.id, tag))
         check = cursor.fetchone()
         check_name = check[3]
-        check_tag[2]
+        check_tag = check[2]
 
         if check_tag == tag and check_name != name:
             message = 'Tupper tag must be unique.'
