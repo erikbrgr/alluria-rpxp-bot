@@ -117,7 +117,9 @@ class Counter(commands.Cog):
             cursor.execute("UPDATE Tuppers SET last_message = ? WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (self.time, guild_id, author.id, tag))
             cursor.execute("SELECT tupper_level FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_role = ?", (guild_id, author.id, 1))
             levels = [row[0] for row in cursor.fetchall()]
-            print(levels)
+
+            average_level = sum(levels) / len(levels)
+            level = round(average_level)
 
 
         # User row
@@ -148,8 +150,10 @@ class Counter(commands.Cog):
 
         if parent:
             cursor.execute("UPDATE Tuppers SET tupper_rpxp = ? WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (newxp, guild_id, author.id, parent))
+            print(f"Applied {newxp} rpxp")
         else:
             cursor.execute("UPDATE Tuppers SET tupper_rpxp = ? WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (newxp, guild_id, author.id, tag))
+            print(f"Applied {newxp} rpxp")
 
         connection.commit()
         connection.close()
