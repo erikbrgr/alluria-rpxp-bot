@@ -68,13 +68,25 @@ class Counter(commands.Cog):
         content = message.content
         guild_id = message.guild.id
         author = message.author
-        
-        content = re.sub(r'^(\b\w+)([^A-Za-z0-9\s])(?!\s)', r'\1\2 ', content)
-        words = content.split()
-        tag = words[0]
 
         connection = sqlite3.connect("./RPXP_databank.db")
         cursor = connection.cursor()
+
+        cursor.execute("SELECT tupper_tag FROM Tuppers WHERE guild_id = ? AND owner_id = ?", (guild_id, author.id))
+        tags = [row[2] for row in cursor.fetchall()]
+        
+        # Build regex pattern to match any known tag at start of message
+        escaped_tags = [re.escape(tag) for tag in tags]
+        pattern = r'^(' + '|'.join(escaped_tags) + r')(.*)'
+        
+        match = re.match(pattern, content)
+        if not match:
+            connection.close()
+            return  # No valid tag found, exit
+        
+        tag = match.group(1)
+        message_body = match.group(2).lstrip()  # Rest of message after tag
+        word_len = len(message_body.split())
 
         cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (guild_id, author.id, tag))
 
