@@ -509,9 +509,6 @@ class Commands(commands.Cog):
     
             tag, rest = content.split(' ', 1)
     
-            cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (guild_id, ctx.author.id, tag))
-            tag_check = cursor.fetchone()
-    
             rest = rest.strip()
     
             # Step 2: Get the character name in square brackets
