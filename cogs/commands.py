@@ -53,7 +53,7 @@ class Commands(commands.Cog):
     async def boop(self, ctx):
         await self.pre_command_checks(ctx, self._boop_task)
     
-    async def _boop_task(self, ctx):
+    async def _boop_task(self, ctx, guild_result):
         async def db_task():
             try:
                 await ctx.message.delete()
