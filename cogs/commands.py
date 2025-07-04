@@ -201,12 +201,12 @@ class Commands(commands.Cog):
             try:
                 role_id = int(role_id)
             except ValueError:
-                await self.send_embed(ctx, "Invalid input!", "Role ID needs to be an integer.", discord.Color.purple())
+                await self.send_embed(ctx, "Invalid input!", "Role ID needs to be an integer.", discord.Color.red())
                 return
     
             role = ctx.guild.get_role(role_id)
             if not role:
-                await self.send_embed(ctx, "Invalid input!", f"No role found with ID {role_id}.", discord.Color.purple())
+                await self.send_embed(ctx, "Invalid input!", f"No role found with ID {role_id}.", discord.Color.red())
                 return
     
             # Role exists, update database
@@ -232,12 +232,12 @@ class Commands(commands.Cog):
             try:
                 channel_id = int(channel_id)
             except ValueError:
-                await self.send_embed(ctx, "Invalid input!", "Channel ID needs to be an integer.", discord.Color.purple())
+                await self.send_embed(ctx, "Invalid input!", "Channel ID needs to be an integer.", discord.Color.red())
                 return
     
             channel = ctx.guild.get_channel(channel_id)
             if not channel:
-                await self.send_embed(ctx, "Invalid input!", f"No channel found with ID {channel_id}.", discord.Color.purple())
+                await self.send_embed(ctx, "Invalid input!", f"No channel found with ID {channel_id}.", discord.Color.red())
                 return
     
             # Channel exists, update database
@@ -262,7 +262,7 @@ class Commands(commands.Cog):
             try:
                 cooldown = int(cooldown)
             except ValueError:
-                await self.send_embed(ctx, "Invalid input!", "Cooldown input has to be an integer.", discord.Color.purple())
+                await self.send_embed(ctx, "Invalid input!", "Cooldown input has to be an integer.", discord.Color.red())
                 return
     
             # Human-readable cooldown formatting
@@ -299,7 +299,7 @@ class Commands(commands.Cog):
         try:
             xppw = float(xppw)
         except ValueError:
-            await self.send_embed(ctx, "Invalid input!", "Input has to be a number.", discord.Color.purple())
+            await self.send_embed(ctx, "Invalid input!", "Input has to be a number.", discord.Color.red())
             return
     
         try:
@@ -323,7 +323,7 @@ class Commands(commands.Cog):
         try:
             falloff = int(falloff)
         except ValueError:
-            await self.send_embed(ctx, "Invalid input!", "Input has to be an integer.", discord.Color.purple())
+            await self.send_embed(ctx, "Invalid input!", "Input has to be an integer.", discord.Color.red())
             return
     
         try:
