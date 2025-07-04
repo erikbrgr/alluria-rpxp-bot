@@ -17,16 +17,16 @@ class Commands(commands.Cog):
         await ctx.message.delete()
         if ctx.author.bot:
             return
-        print(test0)
+        print("test0")
     
         connection = sqlite3.connect("./RPXP_databank.db")
         cursor = connection.cursor()
         guild_id = ctx.guild.id
-        print(test1)
+        print("test1")
     
         cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
         guild_result = cursor.fetchone()
-        print(test2)
+        print("test2")
     
         if guild_result is None:
             message = "This server is not set up yet."
@@ -39,34 +39,28 @@ class Commands(commands.Cog):
     
         # Queue the actual command logic if checks passed
         await self.db_queue.put((task_func, (ctx, guild_result, *task_args)))
-
+    
     async def db_worker(self):
         while True:
             func, args = await self.db_queue.get()
             try:
-                await task()
+                await func(*args)
             except Exception as e:
                 print(f"DB Task Error: {e}")
             self.db_queue.task_done()
-
+    
     @commands.command()
     async def boop(self, ctx):
         await self.pre_command_checks(ctx, self._boop_task)
     
     async def _boop_task(self, ctx, guild_result):
-        async def db_task():
-            try:
-                await ctx.message.delete()
-                if ctx.author.bot:
-                    return
-                bot_latency = round(self.client.latency * 1000)
-        
-                message = f"Hello World! {bot_latency} ms."
-                embed_message = discord.Embed(title="", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-            except Exception as e:
-                print(f"Command Error in {ctx.command.name}: {e}")
-        await self.db_queue.put(db_task)
+        try:
+            bot_latency = round(self.client.latency * 1000)
+            message = f"Hello World! {bot_latency} ms."
+            embed_message = discord.Embed(title="", description=message, color=discord.Color.purple())
+            await ctx.send(embed=embed_message)
+        except Exception as e:
+            print(f"Command Error in {ctx.command.name}: {e}")
 
     @commands.command()
     async def settings(self, ctx):
