@@ -39,8 +39,17 @@ class Commands(commands.Cog):
             # Re-fetch the inserted row so the rest of the logic works
             cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
             guild_result = cursor.fetchone()
+
+        guild_staff_role = guild_result[1]
+        guild_log_channel = guild_result[2]
     
         connection.close()
+
+        if guild_staff_role is None or guild_log_channel is None:
+            message = f"An admin must set a staff role and log channel using `{self.prefix}staff_role <role id>` and `{self.prefix}log_channel <channel id>` before the bot can be used."
+            embed_message = discord.Embed(title="The server is not fully set up", description=message, color=discord.Color.purple())
+            await ctx.send(embed=embed_message)
+            return
     
         # Queue the actual command logic if checks passed
         await self.db_queue.put((task_func, (ctx, guild_result, *task_args)))
