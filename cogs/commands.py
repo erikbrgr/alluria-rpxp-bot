@@ -59,7 +59,7 @@ class Commands(commands.Cog):
         print("commands.py is ready")
 
     @commands.command()
-    async def boop(self, ctx:
+    async def boop(self, ctx):
         await self.pre_command_checks(ctx, self._boop_task)
     
     async def _boop_task(self, ctx):
