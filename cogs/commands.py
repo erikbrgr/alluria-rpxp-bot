@@ -321,7 +321,7 @@ class Commands(commands.Cog):
     async def register(self, ctx, *, content: str):
         await self.pre_command_checks(ctx, self._register_task, content)
 
-    async def _register_task(self, ctx, *, guild_result, content):
+    async def _register_task(self, ctx, guild_result, content):
         try:
             guild_id = guild_result[0]
     
