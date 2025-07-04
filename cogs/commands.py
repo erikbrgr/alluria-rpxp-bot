@@ -5,6 +5,12 @@ import datetime
 from datetime import timezone
 import asyncio
 
+def skip_incomplete_setup_block():
+    def decorator(func):
+        func._skip_incomplete_setup_block = True
+        return func
+    return decorator
+
 class Commands(commands.Cog):
     def __init__(self, client):
         self.client = client
@@ -45,7 +51,9 @@ class Commands(commands.Cog):
     
         connection.close()
 
-        if guild_staff_role is None or guild_log_channel is None:
+        skip_block = getattr(task_func, "_skip_incomplete_setup_block", False)
+
+        if (guild_staff_role is None or guild_log_channel is None) and not skip_block:
             message = f"An admin must set a staff role and log channel using `{self.prefix}staff_role <role id>` and `{self.prefix}log_channel <channel id>` before the bot can be used."
             embed_message = discord.Embed(title="The server is not fully set up", description=message, color=discord.Color.purple())
             await ctx.send(embed=embed_message)
@@ -137,6 +145,20 @@ class Commands(commands.Cog):
             print(f"Command Error in {ctx.command.name}: {e}")
 
     @commands.command()
+    async def wipe_server(self, ctx):
+        connection = sqlite3.connect("./RPXP_databank.db")
+        cursor = connection.cursor()
+    
+        cursor.execute("DELETE FROM Guilds WHERE guild_id = ?", (ctx.guild.id,))
+        connection.commit()
+        connection.close()
+    
+        await ctx.send(embed=discord.Embed(
+            description="Server data wiped from the database.",
+            color=discord.Color.red()
+        ))
+
+    @commands.command()
     @commands.has_permissions(administrator=True)
     async def setup(self, ctx):
         try:
@@ -168,25 +190,29 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def staff_role(self, ctx, staff_role: str):
+    async def staff_role(self, ctx, role_id: int):
+        await self.pre_command_checks(ctx, self._staff_role_task, role_id)
+
+    @skip_incomplete_setup_block()
+    async def staff_role(self, ctx, role_id: str):
         try:
             await ctx.message.delete()
             if ctx.author.bot:
                 return
             try:
-                staff_role = int(staff_role)
+                role_id = int(role_id)
             except ValueError:
                 message = "Role ID needs to be an integer."
                 embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
                 await ctx.send(embed = embed_message)
                 return
-            role = ctx.guild.get_role(staff_role)
+            role = ctx.guild.get_role(role_id)
             if role:
                 message = f"Staff role set to {role.mention}"
                 embed_message = discord.Embed(title="Staff role saved.", description=message, color=discord.Color.purple()) 
                 await ctx.send(embed = embed_message)
             else:
-                message = f"No role found with ID {staff_role}."
+                message = f"No role found with ID {role_id}."
                 embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
                 await ctx.send(embed = embed_message)
                 return
