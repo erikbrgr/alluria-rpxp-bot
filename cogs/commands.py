@@ -493,7 +493,12 @@ class Commands(commands.Cog):
         await self.pre_command_checks(ctx, self._alter_ego_task, content)
 
     async def _alter_ego_task(self, ctx, guild_result, content):    
-        try:            
+        try:
+            guild_id = guild_result[0]
+    
+            connection = sqlite3.connect("./RPXP_databank.db")
+            cursor = connection.cursor()
+            
             content = content.strip()
     
             # Step 1: Get the tag
