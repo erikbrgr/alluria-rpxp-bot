@@ -498,7 +498,7 @@ class Commands(commands.Cog):
     
             connection = sqlite3.connect("./RPXP_databank.db")
             cursor = connection.cursor()
-            
+    
             content = content.strip()
     
             # Step 1: Get the tag
@@ -508,8 +508,6 @@ class Commands(commands.Cog):
                 return
     
             tag, rest = content.split(' ', 1)
-    
-            rest = rest.strip()
     
             # Step 2: Get the character name in square brackets
             if not rest.startswith('['):
@@ -525,20 +523,20 @@ class Commands(commands.Cog):
     
             name = rest[1:end_bracket_index]
             rest = rest[end_bracket_index + 1:].strip()
-
-            # Check if tag is unique or name matches
+    
+            # Check tag uniqueness (allow overwrite if name matches)
             cursor.execute(
                 "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", 
                 (guild_id, ctx.author.id, tag)
             )
-            check = cursor.fetchone()
+            tag_check = cursor.fetchone()
     
-            if check and check[2] == tag and check[3] != name:
+            if tag_check and tag_check[3] != name:
                 await self.send_embed(ctx, "Invalid input!", "Tupper tag must be unique.", discord.Color.red())
                 connection.close()
                 return
     
-            # Step 2: Get the character name in square brackets
+            # Step 3: Get the parent name in square brackets
             if not rest.startswith('['):
                 await self.send_embed(ctx, "Invalid input!", "Parent name must be in square brackets.", discord.Color.red())
                 connection.close()
@@ -558,28 +556,52 @@ class Commands(commands.Cog):
                 connection.close()
                 return
     
-            cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (guild_id, ctx.author.id, parent))
-    
+            # Check parent existence and role
+            cursor.execute(
+                "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", 
+                (guild_id, ctx.author.id, parent)
+            )
             adoption = cursor.fetchone()
+    
+            if adoption is None:
+                await self.send_embed(ctx, "Invalid input!", "Parent not found. The parent needs to be one of your PC tuppers.", discord.Color.red())
+                connection.close()
+                return
+    
             parent_role = adoption[4]
             parent_level = adoption[5]
     
-            if adoption is None:
-                await self.send_embed(ctx, "Invalid input!", 'Parent not found. The parent needs to be one of your PC tuppers.', discord.Color.red())
-                connection.close()
-                return
-            
             if parent_role != 1:
-                await self.send_embed(ctx, "Invalid input!", 'Parent is not a PC. The parent needs to be one of your PC tuppers.', discord.Color.red())
+                await self.send_embed(ctx, "Invalid input!", "Parent is not a PC. The parent needs to be one of your PC tuppers.", discord.Color.red())
                 connection.close()
                 return
-            
-            cursor.execute("INSERT INTO Tuppers (guild_id, owner_id, tupper_tag, tupper_name, tupper_role, tupper_level, parent) Values (?,?,?,?,?,?,?)", (guild_id, ctx.author.id, tag, name, 2, parent_level, parent))
+    
+            # Check for existing alter with same name
+            cursor.execute(
+                "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", 
+                (guild_id, ctx.author.id, name)
+            )
+            existing = cursor.fetchall()
+    
+            if existing:
+                await self.send_embed(ctx, "Tupper of that name already registered.", f"**{name}** is being overwritten.", discord.Color.yellow())
+                cursor.execute(
+                    "DELETE FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", 
+                    (guild_id, ctx.author.id, name)
+                )
+                connection.commit()
+    
+            # Insert new alter
+            cursor.execute(
+                "INSERT INTO Tuppers (guild_id, owner_id, tupper_tag, tupper_name, tupper_role, tupper_level, parent) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                (guild_id, ctx.author.id, tag, name, 2, parent_level, parent)
+            )
     
             connection.commit()
             connection.close()
     
             await self.send_embed(ctx, "Alter registered.", f"{name} was registered as an alter of {parent}.", discord.Color.purple())
+    
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
 
