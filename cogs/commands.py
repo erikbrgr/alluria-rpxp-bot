@@ -171,7 +171,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def staff_role(self, ctx, role_id: int):
+    async def staff_role(self, ctx, role_id: str):
         await self.pre_command_checks(ctx, self._staff_role_task, role_id)
 
     @skip_incomplete_setup_block()
@@ -202,7 +202,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def log_channel(self, ctx, channel_id: int):
+    async def log_channel(self, ctx, channel_id: str):
         await self.pre_command_checks(ctx, self._log_channel_task, channel_id)
 
     @skip_incomplete_setup_block()
@@ -233,7 +233,7 @@ class Commands(commands.Cog):
     
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def cooldown(self, ctx, cooldown: int):
+    async def cooldown(self, ctx, cooldown: str):
         await self.pre_command_checks(ctx, self._cooldown_task, cooldown)
 
     @skip_incomplete_setup_block()
@@ -271,7 +271,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def xp_per_word(self, ctx, xppw: float):
+    async def xp_per_word(self, ctx, xppw: str):
         await self.pre_command_checks(ctx, self._xp_per_word_task, xppw)
 
     @skip_incomplete_setup_block()
@@ -295,7 +295,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def level_falloff(self, ctx, falloff: int):
+    async def level_falloff(self, ctx, falloff: str):
         await self.pre_command_checks(ctx, self._level_falloff_task, falloff)
 
     @skip_incomplete_setup_block()
