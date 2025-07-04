@@ -14,29 +14,29 @@ class Commands(commands.Cog):
         self.client.loop.create_task(self.db_worker())
 
     async def pre_command_checks(self, ctx, task_func, *task_args):
-    await ctx.message.delete()
-    if ctx.author.bot:
-        return
-
-    connection = sqlite3.connect("./RPXP_databank.db")
-    cursor = connection.cursor()
-    guild_id = ctx.guild.id
-
-    cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
-    guild_result = cursor.fetchone()
-    print(test)
-
-    if guild_result is None:
-        message = "This server is not set up yet."
-        embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple())
-        await ctx.send(embed=embed_message)
+        await ctx.message.delete()
+        if ctx.author.bot:
+            return
+    
+        connection = sqlite3.connect("./RPXP_databank.db")
+        cursor = connection.cursor()
+        guild_id = ctx.guild.id
+    
+        cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
+        guild_result = cursor.fetchone()
+        print(test)
+    
+        if guild_result is None:
+            message = "This server is not set up yet."
+            embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple())
+            await ctx.send(embed=embed_message)
+            connection.close()
+            return
+    
         connection.close()
-        return
-
-    connection.close()
-
-    # Queue the actual command logic if checks passed
-    await self.db_queue.put((task_func, (ctx, guild_result, *task_args)))
+    
+        # Queue the actual command logic if checks passed
+        await self.db_queue.put((task_func, (ctx, guild_result, *task_args)))
 
     async def db_worker(self):
         while True:
