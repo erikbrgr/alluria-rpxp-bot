@@ -973,7 +973,7 @@ class Commands(commands.Cog):
     async def list(self, ctx, content: str):
         await self.pre_command_checks(ctx, self._list_task, content)
     
-    async def _list_task(self, ctx, guild_result content):
+    async def _list_task(self, ctx, guild_result, content):
         try:
             guild_id = guild_result[0]
             owner_id = ctx.author.id
