@@ -749,7 +749,7 @@ class Commands(commands.Cog):
         
             # Step 1: Get character name in square brackets
             if not content.startswith('['):
-                await self.send_embed(ctx, "Invalid input!", "Character aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaname must be in square brackets.", discord.Color.red())
+                await self.send_embed(ctx, "Invalid input!", "Character name must be in square brackets.", discord.Color.red())
                 connection.close()
                 return
         
