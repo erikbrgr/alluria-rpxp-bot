@@ -1040,15 +1040,14 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def helpme(self, ctx):
+        await self.pre_command_checks(ctx, self._helpme_task)
+        
+    async def _helpme_task(self, ctx, guild_result):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
             
             message = "These are all the commands and their function: \n"
     
             message += f"\n\n**`{self.prefix}settings`**: \n- Shows the current settings of the bot on this server."
-            message += f"\n\n**`{self.prefix}setup`**: \n- Makes the bot add the server to its database. Essential for all other functions!"
             message += f"\n\n**`{self.prefix}staff_role <role_id>`**: \n- Sets the staff role so the bot can recognise staff members."
             message += f"\n\n**`{self.prefix}log_channel <channel_id>`**: \n- Sets the where the bot sends automatic log messages."
             message += f"\n\n**`{self.prefix}cooldown <seconds>`**: \n- Sets the cooldown duration for the `{self.prefix}collect` command."
