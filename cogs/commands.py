@@ -19,6 +19,10 @@ class Commands(commands.Cog):
         self.db_queue = asyncio.Queue()
         self.client.loop.create_task(self.db_worker())
 
+    async def send_embed(self, ctx, title, description, color):
+    embed = discord.Embed(title=title, description=description, color=color)
+    await ctx.send(embed=embed)
+
     async def pre_command_checks(self, ctx, task_func, *task_args):
         await ctx.message.delete()
         if ctx.author.bot:
@@ -86,61 +90,68 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def settings(self, ctx):
-        await ctx.message.delete()
+        await self.pre_command_checks(ctx, self._settings_task)
+
+    @skip_incomplete_setup_block()
+    async def _settings_task(self, ctx, guild_result):
         try:
-            if ctx.author.bot:
-                return
-            
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
+            staff_role_id = guild_result[1]
+            log_channel_id = guild_result[2]
+            cooldown = guild_result[3]
+            xppw = guild_result[4]
+            falloff = guild_result[5]
     
-            cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
-    
-            result = cursor.fetchone()
-            connection.close()
-    
-            staff_role_id = result[1]
-            log_channel_id = result[2]
-            cooldown = result[3]
-            xppw = result[4]
-            falloff = result[5]
-    
-            # Get the actual Role and Channel objects
-            staff_role = ctx.guild.get_role(staff_role_id)
-            log_channel = ctx.guild.get_channel(log_channel_id)
-    
-            # Handle missing role or channel
-            staff_role_mention = staff_role.mention if staff_role else f"(Role with ID {staff_role_id} not found)"
-            log_channel_mention = f"<#{log_channel_id}>" if log_channel else f"(Channel with ID {log_channel_id} not found)"
-    
-            # Cooldown formatting
-            if cooldown < 60:
-                time_text = f"{cooldown} seconds"
-            elif cooldown < 3600:
-                minutes = cooldown // 60
-                time_text = f"{minutes} minute{'s' if minutes != 1 else ''}"
-            elif cooldown < 86400:
-                hours = cooldown // 3600
-                time_text = f"{hours} hour{'s' if hours != 1 else ''}"
+            # Handle staff role
+            if staff_role_id:
+                staff_role = ctx.guild.get_role(staff_role_id)
+                staff_role_mention = staff_role.mention if staff_role else f"(Role with ID {staff_role_id} not found)"
             else:
-                days = cooldown // 86400
-                time_text = f"{days} day{'s' if days != 1 else ''}"
+                staff_role_mention = "(Not set)"
     
-            # Final message
+            # Handle log channel
+            if log_channel_id:
+                log_channel = ctx.guild.get_channel(log_channel_id)
+                log_channel_mention = f"<#{log_channel_id}>" if log_channel else f"(Channel with ID {log_channel_id} not found)"
+            else:
+                log_channel_mention = "(Not set)"
+    
+            # Handle cooldown
+            if cooldown:
+                if cooldown < 60:
+                    time_text = f"{cooldown} seconds"
+                elif cooldown < 3600:
+                    minutes = cooldown // 60
+                    time_text = f"{minutes} minute{'s' if minutes != 1 else ''}"
+                elif cooldown < 86400:
+                    hours = cooldown // 3600
+                    time_text = f"{hours} hour{'s' if hours != 1 else ''}"
+                else:
+                    days = cooldown // 86400
+                    time_text = f"{days} day{'s' if days != 1 else ''}"
+            else:
+                time_text = "(Not set)"
+    
+            # XP per word
+            xp_text = f"{xppw} xp" if xppw else "(Not set)"
+    
+            # Falloff
+            falloff_text = f"{falloff}%" if falloff else "(Not set)"
+    
             message = (
                 f"Current server settings:\n"
                 f"- **{staff_role_mention}** is the staff role.\n"
                 f"- **{log_channel_mention}** is the log channel.\n"
                 f"- The collection cooldown lasts for **{time_text}**.\n"
-                f"- Players at level 3 gain **{xppw} xp** per word roleplayed.\n"
-                f"- Rp xp becomes **{falloff}%** less effective for every level beyond third."
+                f"- Players at level 3 gain **{xp_text}** per word roleplayed.\n"
+                f"- RP XP becomes **{falloff_text}** less effective for every level beyond third."
             )
     
-            embed_message = discord.Embed(title="Server settings.", description=message, color=discord.Color.purple())
+            embed_message = discord.Embed(title="Server settings", description=message, color=discord.Color.purple())
             if ctx.guild.icon:
-                embed_message.set_image(url=ctx.guild.icon.url)
+                embed_message.set_thumbnail(url=ctx.guild.icon.url)
+    
             await ctx.send(embed=embed_message)
+    
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
 
@@ -160,208 +171,149 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def setup(self, ctx):
-        try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
-    
-            cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
-    
-            result = cursor.fetchone()
-    
-            if result is None:
-                cursor.execute("INSERT INTO Guilds (guild_id, xppw) Values (?,?)", (guild_id, 0.01))
-                message = "Server added to database"
-                embed_message = discord.Embed(title="", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-            else:
-                message = "Server already in database"
-                embed_message = discord.Embed(title="", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-    
-            connection.commit()
-            connection.close()
-        except Exception as e:
-            print(f"Command Error in {ctx.command.name}: {e}")
-
-    @commands.command()
-    @commands.has_permissions(administrator=True)
     async def staff_role(self, ctx, role_id: int):
         await self.pre_command_checks(ctx, self._staff_role_task, role_id)
 
     @skip_incomplete_setup_block()
     async def _staff_role_task(self, ctx, guild_result, role_id):
         try:
+            # Ensure role_id is an integer
             try:
                 role_id = int(role_id)
             except ValueError:
-                message = "Role ID needs to be an integer."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+                await self.send_embed(ctx, "Invalid input!", "Role ID needs to be an integer.", discord.Color.purple())
                 return
+    
             role = ctx.guild.get_role(role_id)
-            if role:
-                message = f"Staff role set to {role.mention}"
-                embed_message = discord.Embed(title="Staff role saved.", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-            else:
-                message = f"No role found with ID {role_id}."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+            if not role:
+                await self.send_embed(ctx, "Invalid input!", f"No role found with ID {role_id}.", discord.Color.purple())
                 return
     
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
+            # Role exists, update database
+            with sqlite3.connect("./RPXP_databank.db") as connection:
+                cursor = connection.cursor()
+                cursor.execute("UPDATE Guilds SET staff_role = ? WHERE guild_id = ?", (role_id, ctx.guild.id))
+                connection.commit()
     
-            cursor.execute("UPDATE Guilds SET staff_role = ? WHERE guild_id = ?", (staff_role, guild_id))
+            await self.send_embed(ctx, "Staff role saved.", f"Staff role set to {role.mention}", discord.Color.purple())
     
-            connection.commit()
-            connection.close()
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def log_channel(self, ctx, log_channel: str):
+    async def log_channel(self, ctx, channel_id: int):
+        await self.pre_command_checks(ctx, self._log_channel_task, channel_id)
+
+    @skip_incomplete_setup_block()
+    async def _log_channel_task(self, ctx, guild_result, channel_id):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
+            # Ensure channel_id is an integer
             try:
-                log_channel = int(log_channel)
+                channel_id = int(channel_id)
             except ValueError:
-                message = "Channel ID needs to be an integer."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                return
-            role = ctx.guild.get_channel(log_channel)
-            if role:
-                message = f"Log channel set to <#{log_channel}>"
-                embed_message = discord.Embed(title="Staff role saved.", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-            else:
-                message = f"No channel found with ID {log_channel}."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+                await self.send_embed(ctx, "Invalid input!", "Channel ID needs to be an integer.", discord.Color.purple())
                 return
     
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
+            channel = ctx.guild.get_channel(channel_id)
+            if not channel:
+                await self.send_embed(ctx, "Invalid input!", f"No channel found with ID {channel_id}.", discord.Color.purple())
+                return
     
-            cursor.execute("UPDATE Guilds SET rpxp_channel = ? WHERE guild_id = ?", (log_channel, guild_id))
+            # Channel exists, update database
+            with sqlite3.connect("./RPXP_databank.db") as connection:
+                cursor = connection.cursor()
+                cursor.execute("UPDATE Guilds SET rpxp_channel = ? WHERE guild_id = ?", (channel_id, ctx.guild.id))
+                connection.commit()
     
-            connection.commit()
-            connection.close()
+            await self.send_embed(ctx, "Log channel saved.", f"Log channel set to {channel.mention}", discord.Color.purple())
+    
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
     
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def cooldown(self, ctx, cooldown: str):
+    async def cooldown(self, ctx, cooldown: int):
+        await self.pre_command_checks(ctx, self._cooldown_task, cooldown)
+
+    @skip_incomplete_setup_block()
+    async def _cooldown_task(self, ctx, guild_result, cooldown):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
             try:
                 cooldown = int(cooldown)
-                if cooldown < 60:
-                    time_text = f"{cooldown} seconds"
-                elif cooldown < 3600:
-                    minutes = cooldown // 60
-                    time_text = f"{minutes} minute{'s' if minutes != 1 else ''}"
-                elif cooldown < 86400:
-                    hours = cooldown // 3600
-                    time_text = f"{hours} hour{'s' if hours != 1 else ''}"
-                else:
-                    days = cooldown // 86400
-                    time_text = f"{days} day{'s' if days != 1 else ''}"
-                message = f"RP XP collection cooldown set to {time_text}."
-                embed_message = discord.Embed(title="Cooldown saved.", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-    
             except ValueError:
-                message = 'Cooldown input has to be an integer.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
+                await self.send_embed(ctx, "Invalid input!", "Cooldown input has to be an integer.", discord.Color.purple())
                 return
     
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
+            # Human-readable cooldown formatting
+            if cooldown < 60:
+                time_text = f"{cooldown} second{'s' if cooldown != 1 else ''}"
+            elif cooldown < 3600:
+                minutes = cooldown // 60
+                time_text = f"{minutes} minute{'s' if minutes != 1 else ''}"
+            elif cooldown < 86400:
+                hours = cooldown // 3600
+                time_text = f"{hours} hour{'s' if hours != 1 else ''}"
+            else:
+                days = cooldown // 86400
+                time_text = f"{days} day{'s' if days != 1 else ''}"
     
-            cursor.execute("UPDATE Guilds SET cooldown = ? WHERE guild_id = ?", (cooldown, guild_id))
+            # Update the database safely
+            with sqlite3.connect("./RPXP_databank.db") as connection:
+                cursor = connection.cursor()
+                cursor.execute("UPDATE Guilds SET cooldown = ? WHERE guild_id = ?", (cooldown, ctx.guild.id))
+                connection.commit()
     
-            connection.commit()
-            connection.close()
+            await self.send_embed(ctx, "Cooldown saved.", f"RP XP collection cooldown set to {time_text}.", discord.Color.purple())
+    
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def xp_per_word(self, ctx, xppw: str):
+    async def xp_per_word(self, ctx, xppw: float):
+        await self.pre_command_checks(ctx, self._xp_per_word_task, xppw)
+
+    @skip_incomplete_setup_block()
+    async def _xp_per_word_task(self, ctx, guild_result, xppw):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
-            try:
-                xppw = float(xppw)
-            except ValueError:
-                message = 'Input has to be a number.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
+            xppw = float(xppw)
+        except ValueError:
+            await self.send_embed(ctx, "Invalid input!", "Input has to be a number.", discord.Color.purple())
+            return
     
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
+        try:
+            with sqlite3.connect("./RPXP_databank.db") as connection:
+                cursor = connection.cursor()
+                guild_id = ctx.guild.id
+                cursor.execute("UPDATE Guilds SET xppw = ? WHERE guild_id = ?", (xppw, guild_id))
+                connection.commit()
     
-            cursor.execute("UPDATE Guilds SET xppw = ? WHERE guild_id = ?", (xppw, guild_id))
-    
-            message = f'Players now gain **{xppw} xp** per word at level 3'
-            embed_message = discord.Embed(title="Xp per word set.", description=message, color=discord.Color.purple()) 
-            await ctx.send(embed = embed_message)
-    
-            connection.commit()
-            connection.close()
+            await self.send_embed(ctx, "Xp per word set.", f"Players now gain **{xppw} xp** per word at level 3.", discord.Color.purple())
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def level_falloff(self, ctx, falloff: str):
+    async def level_falloff(self, ctx, falloff: int):
+        await self.pre_command_checks(ctx, self._level_falloff_task, falloff)
+
+    @skip_incomplete_setup_block()
+    async def _level_falloff_task(self, ctx, guild_result, falloff):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
-            try:
-                falloff = int(falloff)
-            except ValueError:
-                message = 'Input has to be an integer.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
+            falloff = int(falloff)
+        except ValueError:
+            await self.send_embed(ctx, "Invalid input!", "Input has to be an integer.", discord.Color.purple())
+            return
     
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
+        try:
+            with sqlite3.connect("./RPXP_databank.db") as connection:
+                cursor = connection.cursor()
+                guild_id = ctx.guild.id
+                cursor.execute("UPDATE Guilds SET level_falloff = ? WHERE guild_id = ?", (falloff, guild_id))
+                connection.commit()
     
-            cursor.execute("UPDATE Guilds SET level_falloff = ? WHERE guild_id = ?", (falloff, guild_id))
-    
-            message = f'Rp xp is **{falloff}%** less effective per level gained.'
-            embed_message = discord.Embed(title="Level falloff set.", description=message, color=discord.Color.purple()) 
-            await ctx.send(embed = embed_message)
-    
-            connection.commit()
-            connection.close()
+            await self.send_embed(ctx, "Level falloff set.", f"Rp xp is **{falloff}%** less effective per level gained.", discord.Color.purple())
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
     
