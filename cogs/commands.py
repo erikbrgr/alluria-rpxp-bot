@@ -880,7 +880,7 @@ class Commands(commands.Cog):
             print(f"Command Error in {ctx.command.name}: {e}")
 
     @commands.command()
-    async def collect(self, ctx,):
+    async def collect(self, ctx):
         await self.pre_command_checks(ctx, self._collect_task)
     
     async def _collect_task(self, ctx, guild_result):
@@ -971,93 +971,70 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def list(self, ctx, content: str):
-        try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
+        await self.pre_command_checks(ctx, self._list_task, content)
     
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
+    async def _list_task(self, ctx, guild_result content):
+        try:
+            guild_id = guild_result[0]
             owner_id = ctx.author.id
             display_name = ctx.author.display_name
-    
+        
             if content:
                 if content.lower() != "self":
                     try:
                         owner_id = int(content)
-                        member = ctx.guild.get_member(owner_id)
-                        if member is None:
-                            # Try fetching the member if not cached
-                            member = await ctx.guild.fetch_member(owner_id)
+                        member = ctx.guild.get_member(owner_id) or await ctx.guild.fetch_member(owner_id)
                         display_name = member.display_name
                     except ValueError:
-                        embed_message = discord.Embed(title="Invalid input!", description="Argument must either be `self` or an integer.", color=discord.Color.purple()) 
-                        await ctx.send(embed=embed_message)
+                        await self.send_embed(ctx, "Invalid input!", "Argument must be `self` or a valid user ID.", discord.Color.red())
                         return
                     except discord.NotFound:
-                        embed_message = discord.Embed(title="Invalid input!", description="ID does not belong to a server member.", color=discord.Color.purple()) 
-                        await ctx.send(embed=embed_message)
+                        await self.send_embed(ctx, "Invalid input!", "ID does not belong to a server member.", discord.Color.red())
                         return
-            
-            cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
-            result = cursor.fetchone()
-    
-            if result is None:
-                embed_message = discord.Embed(title="Invalid input!", description="This server is not set up yet.", color=discord.Color.purple()) 
-                await ctx.send(embed=embed_message)
-                connection.close()
-                return
-            
-            cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ?", (guild_id, owner_id))
-            results = cursor.fetchall()
-            connection.close()
-            
-            pcs = []
-            alters = []
-            npcs = []
-    
+        
+            pcs, alters, npcs = [], [], []
+        
+            with sqlite3.connect("./RPXP_databank.db") as connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ?", (guild_id, owner_id))
+                results = cursor.fetchall()
+        
             for row in results:
                 tag = row[2]
-                name = row[3]  # Assuming name is at index 3
-                role_bool = row[4]  # 1 = PC, 0 = NPC
+                name = row[3]
+                role = row[4]
                 level = row[5]
                 parent = row[9]
-    
-                if role_bool == 1:
+        
+                if role == 1:
                     pcs.append(f"{name} {level} | `{tag}`")
-                elif role_bool == 0:
+                elif role == 0:
                     npcs.append(f"{name} | `{tag}`")
-                elif role_bool == 2:
+                elif role == 2:
                     alters.append(f"{name} | `{tag}` | Parented to: {parent}")
-    
-            if not pcs and not alters and not npcs:
-                message = f"{display_name} has no registered tuppers."
-                embed_message = discord.Embed(title=f"{display_name}'s tupper list.", description=message, color=discord.Color.purple())
-                embed_message.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar)
-                await ctx.send(embed = embed_message)
-                return
-    
-            message = f"{display_name} has the following tuppers:\n"
-    
-            if pcs:
-                message += "\n__**PCs:**__\n"
-                for pc in pcs:
-                    message += f"- {pc}\n"
-    
-            if alters:
-                message += "\n__**Alters:**__\n"
-                for alter in alters:
-                    message += f"- {alter}\n"
-    
-            if npcs:
-                message += "\n__**NPCs:**__\n"
-                for npc in npcs:
-                    message += f"- {npc}\n"
-    
-            embed_message = discord.Embed(title=f"{display_name}'s tupper list.", description=message, color=discord.Color.purple())
+        
+            if not (pcs or alters or npcs):
+                description = f"{display_name} has no registered tuppers."
+                color = discord.Color.red()
+            else:
+                description = f"{display_name} has the following tuppers:\n"
+                if pcs:
+                    description += "\n__**PCs:**__\n" + "\n".join(f"- {pc}" for pc in pcs)
+                if alters:
+                    description += "\n\n__**Alters:**__\n" + "\n".join(f"- {alter}" for alter in alters)
+                if npcs:
+                    description += "\n\n__**NPCs:**__\n" + "\n".join(f"- {npc}" for npc in npcs)
+                color = discord.Color.purple()
+        
+            embed_message = discord.Embed(
+                title=f"{display_name}'s tupper list.",
+                description=description,
+                color=color
+            )
             embed_message.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar)
-            await ctx.send(embed = embed_message)
+        
+            await ctx.send(embed=embed_message)
+        
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
 
