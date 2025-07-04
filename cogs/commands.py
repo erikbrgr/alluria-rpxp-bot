@@ -196,9 +196,6 @@ class Commands(commands.Cog):
     @skip_incomplete_setup_block()
     async def _staff_role_task(self, ctx, guild_result, role_id):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
             try:
                 role_id = int(role_id)
             except ValueError:
