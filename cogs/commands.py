@@ -1207,3 +1207,10 @@ class Commands(commands.Cog):
 
 async def setup(client):
     await client.add_cog(Commands(client))
+
+# Hey Erik, if you ever read this then I hope you don't feel like you are responsible for my departure
+# I am just very hurt by how all I say got interpreted as me being a disrespectful, mocking, dismissive person.
+# All I wanted was a place where I could feel comfortable and appreciated.
+# Do not seek me out to change my mind or apologise. If you just want to be my friend unrelated to the server, that is fine. But I am fucking done with that place now. 
+
+# Anyways, good luck with the bot. I tried to clean up the code as much as I could today, but didn't finish all of it.
