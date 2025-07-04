@@ -13,6 +13,31 @@ class Commands(commands.Cog):
         self.db_queue = asyncio.Queue()
         self.client.loop.create_task(self.db_worker())
 
+    async def pre_command_checks(self, ctx, task_func, *task_args):
+    await ctx.message.delete()
+    if ctx.author.bot:
+        return
+
+    connection = sqlite3.connect("./RPXP_databank.db")
+    cursor = connection.cursor()
+    guild_id = ctx.guild.id
+
+    cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
+    guild_result = cursor.fetchone()
+    print(test)
+
+    if guild_result is None:
+        message = "This server is not set up yet."
+        embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple())
+        await ctx.send(embed=embed_message)
+        connection.close()
+        return
+
+    connection.close()
+
+    # Queue the actual command logic if checks passed
+    await self.db_queue.put((task_func, (ctx, guild_result, *task_args)))
+
     async def db_worker(self):
         while True:
             task = await self.db_queue.get()
@@ -34,7 +59,10 @@ class Commands(commands.Cog):
         print("commands.py is ready")
 
     @commands.command()
-    async def boop(self, ctx):
+    async def boop(self, ctx:
+        await self.pre_command_checks(ctx, self._boop_task)
+    
+    async def _boop_task(self, ctx):
         async def db_task():
             try:
                 await ctx.message.delete()
