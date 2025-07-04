@@ -658,93 +658,80 @@ class Commands(commands.Cog):
     
     @commands.command()
     async def setlevel(self, ctx, *, content: str):
+        await self.pre_command_checks(ctx, self._setlevel_task, content)
+        
+    async def _setlevel_task(self, ctx, guild_result, content):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
+            guild_id = guild_result[0]
             connection = sqlite3.connect("./RPXP_databank.db")
             cursor = connection.cursor()
-            guild_id = ctx.guild.id
     
-            cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
-    
-            result = cursor.fetchone()
-    
-            if result is None:
-                message = "This server is not set up yet."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-            
             content = content.strip()
     
-            rest = content.strip()
-    
-            # Step 2: Get the character name in square brackets
-            if not rest.startswith('['):
-                message = 'Character name must be in square brackets.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+            # Check for character name in square brackets
+            if not content.startswith('['):
+                await self.send_embed(ctx, "Invalid input!", "Character name must be in square brackets.", discord.Color.red())
                 connection.close()
                 return
     
-            end_bracket_index = rest.find(']', 1)
+            end_bracket_index = content.find(']')
             if end_bracket_index == -1:
-                message = 'Closing bracket for character name is missing.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+                await self.send_embed(ctx, "Invalid input!", "Closing bracket for character name is missing.", discord.Color.red())
                 connection.close()
                 return
     
-            name = rest[1:end_bracket_index]
-            rest = rest[end_bracket_index + 1:].strip()        
+            name = content[1:end_bracket_index]
+            rest = content[end_bracket_index + 1:].strip()
     
-            cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (guild_id, ctx.author.id, name))
+            cursor.execute(
+                "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", 
+                (guild_id, ctx.author.id, name)
+            )
             result = cursor.fetchone()
     
             if result is None:
-                message = f"You do not have a tupper named **{name}** registered"
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close
+                await self.send_embed(ctx, "Invalid input!", f"You do not have a tupper named **{name}** registered", discord.Color.red())
+                connection.close()
                 return
-            if result[4] == 0:
-                message = f"NPCs do not have levels."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close
+    
+            role = result[4]  # tupper_role
+            if role == 0:
+                await self.send_embed(ctx, "Invalid input!", f"NPCs do not have levels.", discord.Color.red())
+                connection.close()
                 return
-            if result[4] == 2:
-                message = f"Alter's levels are dependant on the parent."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close
+            if role == 2:
+                await self.send_embed(ctx, "Invalid input!", f"An alter's level is linked to the parent.", discord.Color.red())
+                connection.close()
                 return
+    
             try:
                 level = int(rest)
             except ValueError:
-                message = 'Level input has to be an integer.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+                await self.send_embed(ctx, "Invalid input!", 'Level input has to be an integer.', discord.Color.red())
                 connection.close()
                 return
-            if (level < 3) or (level > 20):
-                message = 'Level input has to be between **3** and **20**.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+    
+            if level < 3 or level > 20:
+                await self.send_embed(ctx, "Invalid input!", 'Level input has to be between **3** and **20**.', discord.Color.red())
                 connection.close()
-            
-            cursor.execute("UPDATE Tuppers SET tupper_level = ? WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (level, guild_id, ctx.author.id, name))
-            cursor.execute("UPDATE Tuppers SET tupper_level = ? WHERE guild_id = ? AND owner_id = ? AND parent = ?", (level, guild_id, ctx.author.id, name))
+                return
+    
+            # Update the tupper's level
+            cursor.execute(
+                "UPDATE Tuppers SET tupper_level = ? WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?",
+                (level, guild_id, ctx.author.id, name)
+            )
+            # Also update alters linked to this tupper
+            cursor.execute(
+                "UPDATE Tuppers SET tupper_level = ? WHERE guild_id = ? AND owner_id = ? AND parent = ?",
+                (level, guild_id, ctx.author.id, name)
+            )
     
             connection.commit()
             connection.close()
-            
-            message = f"`{name}` was set to level {level}."
-            embed_message = discord.Embed(title=f"{ctx.author.display_name} sets the level of a tupper.", description=message, color=discord.Color.purple()) 
-            await ctx.send(embed = embed_message)
-            connection.close()
+    
+            await self.send_embed(ctx, f"{ctx.author.display_name} sets the level of a tupper.", f"`{name}` was set to level {level}.", discord.Color.purple())
+    
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
 
