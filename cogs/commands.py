@@ -73,11 +73,7 @@ class Commands(commands.Cog):
         skip_block = getattr(task_func, "_skip_incomplete_setup_block", False)
     
         if (guild_staff_role is None or guild_log_channel is None) and not skip_block:
-            message = (
-                f"An admin must set a staff role and log channel using `{self.prefix}staff_role <role id>` "
-                f"and `{self.prefix}log_channel <channel id>` before the bot can be used."
-            )
-            await self.send_embed(ctx, "The server is not fully set up.", message, discord.Color.purple())
+            await self.send_embed(ctx, "The server is not fully set up.", f"An admin must set a staff role and log channel using `{self.prefix}staff_role <role id>` and `{self.prefix}log_channel <channel id>` before the bot can be used.", discord.Color.red())
             return
     
         # Pass to the command logic task
