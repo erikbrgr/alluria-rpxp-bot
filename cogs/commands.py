@@ -9,6 +9,17 @@ class Commands(commands.Cog):
         self.client = client
         self.time = 0
         self.prefix = "$"
+        self.db_queue = asyncio.Queue()
+        self.bot.loop.create_task(self.db_worker())
+
+    async def db_worker(self):
+        while True:
+            task = await self.db_queue.get()
+            try:
+                await task()
+            except Exception as e:
+                print(f"DB Task Error: {e}")
+            self.db_queue.task_done()
 
     @tasks.loop(seconds=1)
     async def fetch_time(self):
@@ -23,17 +34,19 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def boop(self, ctx):
-        try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
-            bot_latency = round(self.client.latency * 1000)
-    
-            message = f"Hello World! {bot_latency} ms."
-            embed_message = discord.Embed(title="", description=message, color=discord.Color.purple()) 
-            await ctx.send(embed = embed_message)
-        except Exception as e:
-            print(f"Command Error in {ctx.command.name}: {e}")
+        async def db_task():
+            try:
+                await ctx.message.delete()
+                if ctx.author.bot:
+                    return
+                bot_latency = round(self.client.latency * 1000)
+        
+                message = f"Hello World! {bot_latency} ms."
+                embed_message = discord.Embed(title="", description=message, color=discord.Color.purple()) 
+                await ctx.send(embed = embed_message)
+            except Exception as e:
+                print(f"Command Error in {ctx.command.name}: {e}")
+        await self.db_queue.put(db_task)
 
     @commands.command()
     async def settings(self, ctx):
