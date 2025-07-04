@@ -42,23 +42,12 @@ class Commands(commands.Cog):
 
     async def db_worker(self):
         while True:
-            task = await self.db_queue.get()
+            func, args = await self.db_queue.get()
             try:
                 await task()
             except Exception as e:
                 print(f"DB Task Error: {e}")
             self.db_queue.task_done()
-
-    @tasks.loop(seconds=1)
-    async def fetch_time(self):
-        dt = datetime.datetime.now(timezone.utc) 
-        utc_time = dt.replace(tzinfo=timezone.utc) 
-        self.time = int(utc_time.timestamp())
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        self.fetch_time.start()
-        print("commands.py is ready")
 
     @commands.command()
     async def boop(self, ctx):
@@ -1306,6 +1295,17 @@ class Commands(commands.Cog):
             connection.close()
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
+
+    @tasks.loop(seconds=1)
+    async def fetch_time(self):
+        dt = datetime.datetime.now(timezone.utc) 
+        utc_time = dt.replace(tzinfo=timezone.utc) 
+        self.time = int(utc_time.timestamp())
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.fetch_time.start()
+        print("commands.py is ready")
 
 async def setup(client):
     await client.add_cog(Commands(client))
