@@ -17,23 +17,19 @@ class Commands(commands.Cog):
         await ctx.message.delete()
         if ctx.author.bot:
             return
-        print("test0")
     
         connection = sqlite3.connect("./RPXP_databank.db")
         cursor = connection.cursor()
         guild_id = ctx.guild.id
-        print("test1")
     
         cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
         guild_result = cursor.fetchone()
-        print("test2")
     
-        if guild_result is None:
-            message = "This server is not set up yet."
-            embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple())
-            await ctx.send(embed=embed_message)
-            connection.close()
-            return
+        if result is None:
+            cursor.execute("INSERT INTO Guilds (guild_id, xppw, cooldown, level_falloff) Values (?,?,?,?)", (guild_id, 0.02, 28800, 5))
+            message = "Server added to database"
+            embed_message = discord.Embed(title="", description=message, color=discord.Color.purple()) 
+            await ctx.send(embed = embed_message)
     
         connection.close()
     
