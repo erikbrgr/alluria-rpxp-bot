@@ -20,8 +20,8 @@ class Commands(commands.Cog):
         self.client.loop.create_task(self.db_worker())
 
     async def send_embed(self, ctx, title, description, color):
-    embed = discord.Embed(title=title, description=description, color=color)
-    await ctx.send(embed=embed)
+        embed = discord.Embed(title=title, description=description, color=color)
+        await ctx.send(embed=embed)
 
     async def pre_command_checks(self, ctx, task_func, *task_args):
         await ctx.message.delete()
