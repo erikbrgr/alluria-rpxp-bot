@@ -607,65 +607,52 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def retire(self, ctx, *, content: str):
+        await self.pre_command_checks(ctx, self._retire_task, content)
+        
+    async def _retire_task(self, ctx, guild_result, content):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
+            guild_id = guild_result[0]
             connection = sqlite3.connect("./RPXP_databank.db")
             cursor = connection.cursor()
-            guild_id = ctx.guild.id
     
-            cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
-    
-            result = cursor.fetchone()
-    
-            if result is None:
-                message = "This server is not set up yet."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-            
             content = content.strip()
     
-            rest = content.strip()
-    
-            # Step 2: Get the character name in square brackets
-            if not rest.startswith('['):
-                message = 'Character name must be in square brackets.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+            # Check for character name in square brackets
+            if not content.startswith('['):
+                await self.send_embed(ctx, "Invalid input!", "Character name must be in square brackets.", discord.Color.red())
                 connection.close()
                 return
     
-            end_bracket_index = rest.find(']', 1)
+            end_bracket_index = content.find(']')
             if end_bracket_index == -1:
-                message = 'Closing bracket for character name is missing.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
+                await self.send_embed(ctx, "Invalid input!", "Closing bracket for character name is missing.", discord.Color.red())
                 connection.close()
                 return
     
-            name = rest[1:end_bracket_index]
-            rest = rest[end_bracket_index + 1:].strip()
+            name = content[1:end_bracket_index]
     
-            cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (guild_id, ctx.author.id, name))
+            # Check if tupper exists
+            cursor.execute(
+                "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?",
+                (guild_id, ctx.author.id, name)
+            )
             result = cursor.fetchone()
     
             if result is None:
-                message = f"You do not have a tupper named **{name}** registered"
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close
-            
-            cursor.execute("DELETE FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (guild_id, ctx.author.id, name))
-            cursor.execute("DELETE FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND parent = ?", (guild_id, ctx.author.id, name))
-            connection.commit()
-            connection.close
+                await self.send_embed(ctx, "Invalid input!", f"You do not have a tupper named **{name}** registered", discord.Color.red())
+                connection.close()
+                return
     
-            message = f"**{name}** was retired."
-            embed_message = discord.Embed(title="Tupper retired.", description=message, color=discord.Color.purple()) 
-            await ctx.send(embed = embed_message)
+            # Delete the tupper and all alters with this tupper as parent in one go
+            cursor.execute(
+                "DELETE FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND (tupper_name = ? OR parent = ?)",
+                (guild_id, ctx.author.id, name, name)
+            )
+            connection.commit()
+            connection.close()
+    
+            await self.send_embed(ctx, "Tupper retired.", f"**{name}** was retired.", discord.Color.purple())
+    
         except Exception as e:
             print(f"Command Error in {ctx.command.name}: {e}")
     
