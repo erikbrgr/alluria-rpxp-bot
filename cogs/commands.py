@@ -11,7 +11,7 @@ class Commands(commands.Cog):
         self.time = 0
         self.prefix = "$"
         self.db_queue = asyncio.Queue()
-        self.bot.loop.create_task(self.db_worker())
+        self.client.loop.create_task(self.db_worker())
 
     async def db_worker(self):
         while True:
