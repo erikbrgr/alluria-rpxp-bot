@@ -319,163 +319,163 @@ class Commands(commands.Cog):
     
     @commands.command()
     async def register(self, ctx, *, content: str):
+        await self.pre_command_checks(ctx, self._register_task, content)
+
+    async def _register_task(self, ctx, *, guild_result, content):
         try:
-            await ctx.message.delete()
-            if ctx.author.bot:
-                return
-    
-            connection = sqlite3.connect("./RPXP_databank.db")
-            cursor = connection.cursor()
-            guild_id = ctx.guild.id
-    
-            # Get guild settings
-            cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
-            guild_result = cursor.fetchone()
-    
-            if guild_result is None:
-                message = "This server is not set up yet."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed=embed_message)
-                connection.close()
-                return
-    
-            staff_role = guild_result[1]
-    
-            # Get user's PCs
-            cursor.execute(
-                "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_role = ?", (guild_id, ctx.author.id, 1))
-            tupper_results = cursor.fetchall()
-    
-            pc_amount = len(tupper_results)
-            pc_allowance = 2
-    
-            if any(row[5] >= 10 for row in tupper_results):
-                pc_allowance += 1
-    
-            if any(role.id == staff_role for role in ctx.author.roles):
-                pc_allowance += 1
-    
-            content = content.strip()
-    
-            # Step 1: Get the tag
-            if ' ' not in content:
-                message = "Missing character name."
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-    
-            tag, rest = content.split(' ', 1)
-    
-            # Step 2: Get the character name in quotes
-            if not rest.startswith('['):
-                message = 'Character name must be in square brackets.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-    
-            end_bracket_index = rest.find(']', 1)
-            if end_bracket_index == -1:
-                message = 'Closing bracket for character name is missing.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-    
-            name = rest[1:end_bracket_index]
-            rest = rest[end_bracket_index + 1:].strip()
-    
-            cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", (guild_id, ctx.author.id, tag))
-            check = cursor.fetchone()
-            check_name = check[3]
-            check_tag = check[2]
-    
-            if check_tag == tag and check_name != name:
-                message = 'Tupper tag must be unique.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-    
-            # Step 3: Get the role and optional level
-            if not rest:
-                message = 'Missing role.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-    
-            parts = rest.split()
-    
-            role_raw = parts[0].upper()  # Case-insensitive
-            level = parts[1] if len(parts) > 1 else None
-    
-            if role_raw not in ["PC", "NPC"]:
-                message = 'Role must be "PC" or "NPC" (case-insensitive).'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-    
-            # Step 4: Convert role to bool (1 = PC, 0 = NPC)
-            role_bool = 1 if role_raw == "PC" else 0
-    
-            cursor.execute("SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (guild_id, ctx.author.id, name))
-            result = cursor.fetchall()
-    
-            if result:
-                message= (f"**{name}** is being overwritten.")
-                embed_message = discord.Embed(title="Tupper of that name already registered.", description=message, color=discord.Color.purple()) 
-                await ctx.send(embed = embed_message)
-                cursor.execute("DELETE FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", (guild_id, ctx.author.id, name))
-                connection.commit()
-                pc_amount -= len(result)
-                
-    
-            if role_bool == 1:
-                if pc_amount >= pc_allowance:
-                    message = "You do not have any free PC slots."
-                    embed_message = discord.Embed(title="Registration failed.", description=message, color=discord.Color.purple())
-                    await ctx.send(embed = embed_message)
-                    connection.close()
-                    return
-                if level is None:
-                    message = 'PCs require a level.'
-                    embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple())
-                    await ctx.send(embed = embed_message)
-                    connection.close()
-                    return
-                if int(level) < 3:
-                    message = "PCs start at level 3"
-                    embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple())
-                    await ctx.send(embed = embed_message)
-                    connection.close()
-                    return
-    
-            if role_bool == 0 and level is not None:
-                message = 'NPCs should not have a level.'
-                embed_message = discord.Embed(title="Invalid input!", description=message, color=discord.Color.purple())
-                await ctx.send(embed = embed_message)
-                connection.close()
-                return
-            
-            cursor.execute("INSERT INTO Tuppers (guild_id, owner_id, tupper_tag, tupper_name, tupper_role, tupper_level, tupper_rpxp) Values (?,?,?,?,?,?,?)", (guild_id, ctx.author.id, tag, name, role_bool, level, 0))
-    
-            cursor.execute("SELECT * FROM Users WHERE guild_id = ? AND user_id = ?", (guild_id, ctx.author.id))
-            user = cursor.fetchone()
-            if user is None:
-                cursor.execute("INSERT INTO Users (guild_id, user_id, monthly_messages, monthly_rpxp, total_messages, total_rpxp) VALUES (?, ?, ?, ?, ?, ?)", (guild_id, ctx.author.id, 0, 0, 0, 0))
-                connection.commit()  # Commit after insert
-    
-            connection.commit()
+        guild_id = guild_result[0]
+
+        connection = sqlite3.connect("./RPXP_databank.db")
+        cursor = connection.cursor()
+
+        staff_role = guild_result[1]
+
+        # Get user's PCs
+        cursor.execute(
+            "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_role = ?", 
+            (guild_id, ctx.author.id, 1)
+        )
+        tupper_results = cursor.fetchall()
+
+        pc_amount = len(tupper_results)
+        pc_allowance = 2
+
+        if any(row[5] >= 10 for row in tupper_results):
+            pc_allowance += 1
+
+        if any(role.id == staff_role for role in ctx.author.roles):
+            pc_allowance += 1
+
+        content = content.strip()
+
+        # Step 1: Get the tag
+        if ' ' not in content:
+            await self.send_embed(ctx, "Invalid input!", "Missing character name.", discord.Color.purple())
             connection.close()
-    
-            message = f"You have successfully registered your Tupper. If any information is wrong please use the command again with the same name to overwrite the other imputs. \nIf the name is wrong use `{self.prefix}retire {name}` and try again.\n- Tag: `{tag}`\n- Name: `{name}`\n- Role: `{role_raw}`\n- Level: `{level if level else 'N/A'}`"
-            embed_message = discord.Embed(title="Tupper Registered.", description=message, color=discord.Color.purple())
-            await ctx.send(embed = embed_message)
-        except Exception as e:
-            print(f"Command Error in {ctx.command.name}: {e}")
+            return
+
+        tag, rest = content.split(' ', 1)
+
+        # Step 2: Get the character name in square brackets
+        if not rest.startswith('['):
+            await self.send_embed(ctx, "Invalid input!", "Character name must be in square brackets.", discord.Color.purple())
+            connection.close()
+            return
+
+        end_bracket_index = rest.find(']')
+        if end_bracket_index == -1:
+            await self.send_embed(ctx, "Invalid input!", "Closing bracket for character name is missing.", discord.Color.purple())
+            connection.close()
+            return
+
+        name = rest[1:end_bracket_index]
+        rest = rest[end_bracket_index + 1:].strip()
+
+        # Check if tag is unique or name matches
+        cursor.execute(
+            "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_tag = ?", 
+            (guild_id, ctx.author.id, tag)
+        )
+        check = cursor.fetchone()
+
+        if check and check[2] == tag and check[3] != name:
+            await self.send_embed(ctx, "Invalid input!", "Tupper tag must be unique.", discord.Color.purple())
+            connection.close()
+            return
+
+        # Step 3: Role and optional level
+        if not rest:
+            await self.send_embed(ctx, "Invalid input!", "Missing role.", discord.Color.purple())
+            connection.close()
+            return
+
+        parts = rest.split()
+        role_raw = parts[0].upper()
+        level = parts[1] if len(parts) > 1 else None
+
+        if role_raw not in ["PC", "NPC"]:
+            await self.send_embed(ctx, "Invalid input!", 'Role must be "PC" or "NPC" (case-insensitive).', discord.Color.purple())
+            connection.close()
+            return
+
+        role_bool = 1 if role_raw == "PC" else 0
+
+        cursor.execute(
+            "SELECT * FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", 
+            (guild_id, ctx.author.id, name)
+        )
+        existing = cursor.fetchall()
+
+        if existing:
+            await self.send_embed(ctx, "Tupper of that name already registered.", f"**{name}** is being overwritten.", discord.Color.purple())
+            cursor.execute(
+                "DELETE FROM Tuppers WHERE guild_id = ? AND owner_id = ? AND tupper_name = ?", 
+                (guild_id, ctx.author.id, name)
+            )
+            connection.commit()
+            pc_amount -= len(existing)
+
+        # PC validations
+        if role_bool == 1:
+            if pc_amount >= pc_allowance:
+                await self.send_embed(ctx, "Registration failed.", "You do not have any free PC slots.", discord.Color.purple())
+                connection.close()
+                return
+
+            if level is None:
+                await self.send_embed(ctx, "Invalid input!", "PCs require a level.", discord.Color.purple())
+                connection.close()
+                return
+
+            try:
+                level_int = int(level)
+            except ValueError:
+                await self.send_embed(ctx, "Invalid input!", "Level must be an integer.", discord.Color.purple())
+                connection.close()
+                return
+
+            if level_int < 3:
+                await self.send_embed(ctx, "Invalid input!", "PCs start at level 3.", discord.Color.purple())
+                connection.close()
+                return
+        else:
+            if level is not None:
+                await self.send_embed(ctx, "Invalid input!", "NPCs should not have a level.", discord.Color.purple())
+                connection.close()
+                return
+            level_int = None  # Ensure level_int is defined if NPC
+
+        # Insert Tupper
+        cursor.execute(
+            "INSERT INTO Tuppers (guild_id, owner_id, tupper_tag, tupper_name, tupper_role, tupper_level, tupper_rpxp) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+            (guild_id, ctx.author.id, tag, name, role_bool, level_int, 0)
+        )
+
+        # Ensure user exists in Users table
+        cursor.execute("SELECT * FROM Users WHERE guild_id = ? AND user_id = ?", (guild_id, ctx.author.id))
+        user = cursor.fetchone()
+        if user is None:
+            cursor.execute(
+                "INSERT INTO Users (guild_id, user_id, monthly_messages, monthly_rpxp, total_messages, total_rpxp) VALUES (?, ?, 0, 0, 0, 0)", 
+                (guild_id, ctx.author.id)
+            )
+
+        connection.commit()
+        connection.close()
+
+        message = (
+            f"You have successfully registered your Tupper. If any information is wrong please use the command again with the same name to overwrite the other inputs.\n"
+            f"If the name is wrong use `{self.prefix}retire {name}` and try again.\n"
+            f"- Tag: `{tag}`\n"
+            f"- Name: `{name}`\n"
+            f"- Role: `{role_raw}`\n"
+            f"- Level: `{level if level else 'N/A'}`"
+        )
+        await self.send_embed(ctx, "Tupper Registered.", message, discord.Color.purple())
+
+    except Exception as e:
+        print(f"Command Error in {ctx.command.name}: {e}")
+        await self.send_embed(ctx, "Error", "An unexpected error occurred.", discord.Color.red())
 
     @commands.command()
     async def alter_ego(self, ctx, *, content: str):
