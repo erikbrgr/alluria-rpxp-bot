@@ -25,11 +25,20 @@ class Commands(commands.Cog):
         cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
         guild_result = cursor.fetchone()
     
-        if result is None:
-            cursor.execute("INSERT INTO Guilds (guild_id, xppw, cooldown, level_falloff) Values (?,?,?,?)", (guild_id, 0.02, 28800, 5))
-            message = "Server added to database"
-            embed_message = discord.Embed(title="", description=message, color=discord.Color.purple()) 
-            await ctx.send(embed = embed_message)
+        if guild_result is None:
+            cursor.execute(
+                "INSERT INTO Guilds (guild_id, xppw, cooldown, level_falloff) VALUES (?, ?, ?, ?)",
+                (guild_id, 0.02, 28800, 5)
+            )
+            connection.commit()
+    
+            message = "Server added to database with default settings."
+            embed_message = discord.Embed(title="", description=message, color=discord.Color.purple())
+            await ctx.send(embed=embed_message)
+    
+            # Re-fetch the inserted row so the rest of the logic works
+            cursor.execute("SELECT * FROM Guilds WHERE guild_id = ?", (guild_id,))
+            guild_result = cursor.fetchone()
     
         connection.close()
     
